@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Abduldata</title>
+  <script src="https://js.paystack.co/inline.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100">
+
+  <div class="flex justify-center items-center min-h-screen">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-sm">
+      <h1 class="text-2xl font-bold text-center mb-4">Abduldata App</h1>
+
+      <form id="phone-form">
+        <label class="block mb-2 text-sm font-medium text-gray-700">Phone Number</label>
+        <input type="text" id="phone" class="w-full mb-4 p-2 border border-gray-300 rounded" placeholder="e.g. 2347065631640" required />
+
+        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Send Verification Code</button>
+      </form>
+
+      <form id="verify-form" class="hidden mt-4">
+        <label class="block mb-2 text-sm font-medium text-gray-700">Enter Verification Code</label>
+        <input type="text" id="code" class="w-full mb-4 p-2 border border-gray-300 rounded" placeholder="e.g. 123456" required />
+
+        <button type="submit" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">Verify Code</button>
+      </form>
+
+      <div id="payment-section" class="hidden mt-6">
+        <button id="paystack-btn" class="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700">Proceed to Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const phoneForm = document.getElementById("phone-form");
+    const verifyForm = document.getElementById("verify-form");
+    const paymentSection = document.getElementById("payment-section");
+
+    phoneForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const phone = document.getElementById("phone").value;
+
+      const response = await fetch("/send-code", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ phone })
+      });
+
+      const result = await response.json();
+      alert(result.message);
+
+      if (response.ok) {
+        verifyForm.classList.remove("hidden");
+      }
+    });
+
+    verifyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const phone = document.getElementById("phone").value;
+      const code = document.getElementById("code").value;
+
+      const response = await fetch("/verify-code", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ phone, code })
+      });
+
+      const result = await response.json();
+      alert(result.message);
+
+      if (response.ok) {
+        paymentSection.classList.remove("hidden");
+      }
+    });
+
+    document.getElementById("paystack-btn").addEventListener("click", function () {
+      const handler = PaystackPop.setup({
+        key: "pk_live_fefa4cab21e99bd551e0979a445038b389d9cfea",
+        email: "user@abduldata.com",
+        amount: 2500,
+        currency: "NGN",
+        callback: function (response) {
+          alert("Payment successful! Ref: " + response.reference);
+        },
+        onClose: function () {
+          alert("Transaction cancelled");
+        }
+      });
+      handler.openIframe();
+    });
+  </script>
+
+</body>
+</html>
