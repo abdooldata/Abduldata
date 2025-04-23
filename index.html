@@ -1,96 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Abduldata</title>
-  <script src="https://js.paystack.co/inline.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abduldata Application</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://js.paystack.co/inline.js"></script>
 </head>
 <body class="bg-gray-100">
 
-  <div class="flex justify-center items-center min-h-screen">
-    <div class="bg-white p-6 rounded shadow-md w-full max-w-sm">
-      <h1 class="text-2xl font-bold text-center mb-4">Abduldata App</h1>
+    <div class="flex justify-center items-center min-h-screen">
+        <div class="bg-white p-8 rounded shadow-md w-96">
+            <h2 class="text-center text-2xl font-bold mb-4">Abduldata Application</h2>
+            
+            <form id="sign-up-form">
+                <div class="mb-4">
+                    <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="text" id="phone" class="mt-1 p-2 w-full border border-gray-300 rounded" placeholder="Enter your phone number">
+                </div>
 
-      <form id="phone-form">
-        <label class="block mb-2 text-sm font-medium text-gray-700">Phone Number</label>
-        <input type="text" id="phone" class="w-full mb-4 p-2 border border-gray-300 rounded" placeholder="e.g. 2347065631640" required />
+                <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded">Sign Up / Login</button>
+            </form>
 
-        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Send Verification Code</button>
-      </form>
-
-      <form id="verify-form" class="hidden mt-4">
-        <label class="block mb-2 text-sm font-medium text-gray-700">Enter Verification Code</label>
-        <input type="text" id="code" class="w-full mb-4 p-2 border border-gray-300 rounded" placeholder="e.g. 123456" required />
-
-        <button type="submit" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">Verify Code</button>
-      </form>
-
-      <div id="payment-section" class="hidden mt-6">
-        <button id="paystack-btn" class="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700">Proceed to Payment</button>
-      </div>
+            <div class="mt-4 text-center">
+                <button id="paystack-btn" class="bg-green-500 text-white p-2 rounded w-full">Proceed to Payment</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    const phoneForm = document.getElementById("phone-form");
-    const verifyForm = document.getElementById("verify-form");
-    const paymentSection = document.getElementById("payment-section");
+    <script>
+        // Paystack Payment integration
+        document.getElementById('paystack-btn').addEventListener('click', function () {
+            var handler = PaystackPop.setup({
+                key: 'your_paystack_public_key', // Replace with your Paystack public key
+                email: 'user@example.com',
+                amount: 1000, // Payment amount in kobo
+                currency: "NGN",
+                callback: function(response) {
+                    alert('Payment complete! Reference: ' + response.reference);
+                },
+                onClose: function() {
+                    alert('Transaction was not completed.');
+                }
+            });
+            handler.openIframe();
+        });
 
-    phoneForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const phone = document.getElementById("phone").value;
+        // Twilio SMS Verification - Simulated
+        document.getElementById('sign-up-form').addEventListener('submit', function (event) {
+            event.preventDefault();
 
-      const response = await fetch("/send-code", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ phone })
-      });
-
-      const result = await response.json();
-      alert(result.message);
-
-      if (response.ok) {
-        verifyForm.classList.remove("hidden");
-      }
-    });
-
-    verifyForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const phone = document.getElementById("phone").value;
-      const code = document.getElementById("code").value;
-
-      const response = await fetch("/verify-code", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ phone, code })
-      });
-
-      const result = await response.json();
-      alert(result.message);
-
-      if (response.ok) {
-        paymentSection.classList.remove("hidden");
-      }
-    });
-
-    document.getElementById("paystack-btn").addEventListener("click", function () {
-      const handler = PaystackPop.setup({
-        key: "pk_live_fefa4cab21e99bd551e0979a445038b389d9cfea",
-        email: "user@abduldata.com",
-        amount: 2500,
-        currency: "NGN",
-        callback: function (response) {
-          alert("Payment successful! Ref: " + response.reference);
-        },
-        onClose: function () {
-          alert("Transaction cancelled");
-        }
-      });
-      handler.openIframe();
-    });
-  </script>
+            var phoneNumber = document.getElementById('phone').value;
+            if (phoneNumber) {
+                alert('A verification code has been sent to ' + phoneNumber);
+            } else {
+                alert('Please enter a phone number');
+            }
+        });
+    </script>
 
 </body>
 </html>
