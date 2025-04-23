@@ -1,1 +1,75 @@
+const express = require('express');
+const twilio = require('twilio');
+const Paystack = require('paystack-api');
+const dotenv = require('dotenv');
+const bodyParser = require('body-parser');
 
+// Load environment variables
+dotenv.config();
+
+const app = express();
+const port = 3000;
+
+// Twilio setup
+const client = twilio(
+  'AC8a2ca4235af75173d6a804a33c4656df', // TWILIO_ACCOUNT_SID
+  '33c0e1c16cacbbe4ea988068990b5992'   // TWILIO_AUTH_TOKEN
+);
+
+// Paystack setup
+const paystack = new Paystack('sk_live_d376cf9690cd746cd9ffd6ab6b38cd1a03ccd642'); // PAYSTACK_SECRET_KEY
+
+// Middleware
+app.use(bodyParser.json());
+
+// Route to send SMS code
+app.post('/send-verification', (req, res) => {
+  const phoneNumber = req.body.phoneNumber;
+
+  if (!phoneNumber) return res.status(400).json({ message: 'Phone number is required' });
+
+  client.verify.services('VA33be0e09cf12d212245485efaf33395c') // TWILIO_VERIFY_SID
+    .verifications.create({ to: phoneNumber, channel: 'sms' })
+    .then(() => res.json({ message: 'Verification code sent successfully' }))
+    .catch(error => res.status(500).json({ message: 'Error sending verification', error: error.message }));
+});
+
+// Route to verify code
+app.post('/verify-code', (req, res) => {
+  const { phoneNumber, code } = req.body;
+
+  if (!phoneNumber || !code) return res.status(400).json({ message: 'Phone number and code are required' });
+
+  client.verify.services('VA33be0e09cf12d212245485efaf33395c')
+    .verificationChecks.create({ to: phoneNumber, code: code })
+    .then(verification_check => {
+      if (verification_check.status === 'approved') {
+        res.json({ message: 'Phone number verified successfully' });
+      } else {
+        res.status(400).json({ message: 'Invalid verification code' });
+      }
+    })
+    .catch(error => res.status(500).json({ message: 'Error verifying code', error: error.message }));
+});
+
+// Route to initialize payment
+app.post('/pay', (req, res) => {
+  const { email, amount } = req.body;
+
+  if (!email || !amount) return res.status(400).json({ message: 'Email and amount are required' });
+
+  const reference = Math.floor(Math.random() * 1000000).toString();
+
+  paystack.transaction.initialize({
+    email: email,
+    amount: amount * 100,
+    reference: reference,
+  })
+    .then(() => res.json({ message: 'Payment initialized successfully', reference: reference }))
+    .catch(error => res.status(500).json({ message: 'Error initializing payment', error: error.message }));
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
