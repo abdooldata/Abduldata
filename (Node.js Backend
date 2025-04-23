@@ -1,0 +1,57 @@
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const twilio = require('twilio');
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
+// Route: Send verification code
+app.post('/send-code', async (req, res) => {
+  const { phone } = req.body;
+  try {
+    await client.verify.v2.services(process.env.TWILIO_VERIFY_SID)
+      .verifications
+      .create({ to: `+${phone}`, channel: 'sms' });
+
+    res.status(200).json({ message: 'Code sent successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to send code' });
+  }
+});
+
+// Route: Verify code
+app.post('/verify-code', async (req, res) => {
+  const { phone, code } = req.body;
+  try {
+    const verification = await client.verify.v2.services(process.env.TWILIO_VERIFY_SID)
+      .verificationChecks
+      .create({ to: `+${phone}`, code });
+
+    if (verification.status === 'approved') {
+      res.status(200).json({ message: 'Phone verified successfully' });
+    } else {
+      res.status(400).json({ message: 'Invalid code' });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Verification failed' });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
+});
