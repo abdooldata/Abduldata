@@ -73,3 +73,9 @@ app.post('/pay', (req, res) => {
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+TWILIO_ACCOUNT_SID=AC8a2ca4235af75173d6a804a33c4656df
+TWILIO_AUTH_TOKEN=33c0e1c16cacbbe4ea988068990b5992
+TWILIO_VERIFY_SID=VA33be0e09cf12d212245485efaf33395c
+
+PAYSTACK_PUBLIC_KEY=pk_live_fefa4cab21e99bd551e0979a445038b389d9cfea
+PAYSTACK_SECRET_KEY=sk_live_d376cf9690cd746cd9ffd6ab6b38cd1a03ccd642
