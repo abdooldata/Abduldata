@@ -1,57 +1,95 @@
 const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
 const twilio = require('twilio');
+const Paystack = require('paystack-api');
+const dotenv = require('dotenv');
+const bodyParser = require('body-parser');
 
+// Load environment variables from .env file
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
-app.use(cors());
+// Twilio setup
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+// Paystack setup
+const paystack = new Paystack(process.env.PAYSTACK_SECRET_KEY);
+
+// Middleware to parse JSON bodies
 app.use(bodyParser.json());
-app.use(express.static('public'));
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+// Route to initiate SMS verification with Twilio
+app.post('/send-verification', (req, res) => {
+    const phoneNumber = req.body.phoneNumber;
 
-// Route: Send verification code
-app.post('/send-code', async (req, res) => {
-  const { phone } = req.body;
-  try {
-    await client.verify.v2.services(process.env.TWILIO_VERIFY_SID)
-      .verifications
-      .create({ to: `+${phone}`, channel: 'sms' });
-
-    res.status(200).json({ message: 'Code sent successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to send code' });
-  }
-});
-
-// Route: Verify code
-app.post('/verify-code', async (req, res) => {
-  const { phone, code } = req.body;
-  try {
-    const verification = await client.verify.v2.services(process.env.TWILIO_VERIFY_SID)
-      .verificationChecks
-      .create({ to: `+${phone}`, code });
-
-    if (verification.status === 'approved') {
-      res.status(200).json({ message: 'Phone verified successfully' });
-    } else {
-      res.status(400).json({ message: 'Invalid code' });
+    if (!phoneNumber) {
+        return res.status(400).json({ message: 'Phone number is required' });
     }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Verification failed' });
-  }
+
+    client.verify.services(process.env.TWILIO_VERIFY_SID)
+        .verifications.create({
+            to: phoneNumber,
+            channel: 'sms'
+        })
+        .then(verification => {
+            res.json({ message: 'Verification code sent successfully' });
+        })
+        .catch(error => {
+            res.status(500).json({ message: 'Error sending verification', error: error.message });
+        });
 });
 
+// Route to verify the code entered by the user
+app.post('/verify-code', (req, res) => {
+    const phoneNumber = req.body.phoneNumber;
+    const code = req.body.code;
+
+    if (!phoneNumber || !code) {
+        return res.status(400).json({ message: 'Phone number and code are required' });
+    }
+
+    client.verify.services(process.env.TWILIO_VERIFY_SID)
+        .verificationChecks.create({
+            to: phoneNumber,
+            code: code
+        })
+        .then(verification_check => {
+            if (verification_check.status === 'approved') {
+                res.json({ message: 'Phone number verified successfully' });
+            } else {
+                res.status(400).json({ message: 'Invalid verification code' });
+            }
+        })
+        .catch(error => {
+            res.status(500).json({ message: 'Error verifying code', error: error.message });
+        });
+});
+
+// Route to handle Paystack payment
+app.post('/pay', (req, res) => {
+    const { email, amount } = req.body;
+
+    if (!email || !amount) {
+        return res.status(400).json({ message: 'Email and amount are required' });
+    }
+
+    const paystackReference = Math.floor(Math.random() * 1000000).toString();
+
+    paystack.transaction.initialize({
+        email: email,
+        amount: amount * 100, // Paystack expects amount in kobo
+        reference: paystackReference,
+    })
+    .then(response => {
+        res.json({ message: 'Payment initialized successfully', reference: paystackReference });
+    })
+    .catch(error => {
+        res.status(500).json({ message: 'Error initializing payment', error: error.message });
+    });
+});
+
+// Start the server
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+    console.log(`Server is running on http://localhost:${port}`);
 });
